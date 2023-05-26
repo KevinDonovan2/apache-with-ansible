@@ -1,0 +1,63 @@
++---
+- name: apache2 configuration
+  hosts: all
+  become: yes
+  tasks:.
+  
+  		###########################################################################
+    - name: Install Apache2
+      apt:
+        name: apache2
+        state: latest
+        
+        #########################################################################
+    - name: Copy the url 
+      copy:
+        src: "{{ playbook_dir }}/url"
+        dest: /tmp/url
+
+    	###########################################################################
+    - name: Read the url file
+      command: cat /tmp/url
+      register: names_output
+    .
+    	#########################################################################
+    - name: Create file configuration for each domain name
+      template:
+        src: "{{ playbook_dir }}/template/template.conf"
+        dest: "/etc/apache2/sites-available/Titre.conf"
+      loop: "{{ names_output.stdout_lines }}"
+      loop_control:
+        loop_var: url
+    
+		########################################################################"
+    - name: Create directory for each domain name
+      file:
+        path: "/var/www/Titre"
+        state: directory
+      loop: "{{ names_output.stdout_lines }}"
+      loop_control:
+        loop_var: url
+    
+		#############################################################################
+    - name: Create html page for each domain name
+      template:
+        src: "{{ playbook_dir }}/template/template.html"
+        dest: "/var/www/Titre/index.html"
+      loop: "{{ names_output.stdout_lines }}"
+      loop_control:
+        loop_var: url
+    
+    	###########################################################################
+    - name: Active every configuration
+      command: a2ensite Titre.conf
+      loop: "{{ names_output.stdout_lines }}"
+      loop_control:
+        loop_var: url
+    
+    	############################################################################
+    - name: Restart apache2
+      service:
+        name: apache2
+        state: restarted
+    
